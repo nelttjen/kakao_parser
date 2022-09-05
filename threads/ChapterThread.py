@@ -6,7 +6,6 @@ import requests
 from PyQt5.QtCore import QThread, pyqtSignal
 
 from utils.clear_int import get_clear_int
-from utils import ROOT_DIR
 
 
 class ChapterThread(QThread):

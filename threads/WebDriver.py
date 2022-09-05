@@ -9,8 +9,6 @@ from requests import Session
 from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtWidgets import QMessageBox, QWidget
 
-from utils import ROOT_DIR
-
 
 class LoginThread(QThread):
 
@@ -37,7 +35,7 @@ class ProcessThread(QThread):
     def run(self) -> None:
         self.driver.get('https://page.kakao.com/main')
         cookies = get_cookie_from_driver(self.driver, 'kakao.com')
-        with open(f'{ROOT_DIR}\\temp\\cookies.json', 'w', encoding='utf-8') as json_f:
+        with open(f'temp\\cookies.json', 'w', encoding='utf-8') as json_f:
             json.dump(cookies, json_f)
         self.done.emit()
         # self.driver.quit()

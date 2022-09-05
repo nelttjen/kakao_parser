@@ -14,7 +14,7 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QMessageBox,
 
 from threads.WebDriver import LoginThread, ProcessThread
 from threads.DownloadThread import DownloadThread
-from utils import ROOT_DIR, CONFIG_DEFAULT
+from utils import CONFIG_DEFAULT
 from widgets.ChapterChoose import ChapterChoose
 
 
@@ -76,7 +76,7 @@ class Window(QMainWindow):
 
     def login_cookie(self):
         global FIRST
-        with open(f'{ROOT_DIR}\\temp\\cookies.json', 'r', encoding='utf-8') as json_f:
+        with open(f'temp\\cookies.json', 'r', encoding='utf-8') as json_f:
             load_to_session(json_f, self.session)
         self.login_proc.hide()
         QMessageBox.information(self, 'Info', 'Вход завершен')
@@ -174,13 +174,13 @@ def except_hook(cls, exception, traceback):
 
 
 def init():
-    os.mkdir(ROOT_DIR + '\\temp') if not os.path.exists(ROOT_DIR + '\\temp') else None
-    if not os.path.exists(ROOT_DIR + '\\config.json'):
-        with open(f"{ROOT_DIR}\\config.json", 'w', encoding='utf-8') as def_c:
+    os.mkdir('.\\temp') if not os.path.exists('.\\temp') else None
+    if not os.path.exists('.\\config.json'):
+        with open(f".\\config.json", 'w', encoding='utf-8') as def_c:
             json.dump(CONFIG_DEFAULT, def_c)
             setts = CONFIG_DEFAULT
     else:
-        with open(f'{ROOT_DIR}\\config.json', 'r', encoding='utf-8') as load_j:
+        with open(f'.\\config.json', 'r', encoding='utf-8') as load_j:
             setts = json.load(load_j)
     if setts.get('save_directory'):
         try:
@@ -201,10 +201,8 @@ def load_to_session(file, session):
 
 if __name__ == '__main__':
     settings = init()
-    options = ChromeOptions()
-    options.add_argument('--proxy-server=socks5://127.0.0.1:9090')
-    driver = Chrome(ROOT_DIR + '\\chromedriver.exe', options=options)
-    # driver.set_window_rect(0, -1000, 837, 400)
+    driver = Chrome('chromedriver.exe')
+    driver.set_window_rect(0, -1000, 837, 400)
     app = QApplication(sys.argv)
     sys.excepthook = except_hook
     f = Window(settings)
