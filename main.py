@@ -128,8 +128,12 @@ class Window(QMainWindow):
                                     self.DEST_FOLDER + f'\\{self.title_now}')
             thread.chapter_init.connect(lambda x: self.download_status_info.setText(f'Инициализация загрузки - Глава {x}'))
             thread.chapter_start.connect(lambda x: self.download_status_info.setText(f'Загрузка - Глава {x}'))
-            thread.error_chapter.connect(lambda x: QMessageBox.critical(self, 'Ошибка загрузки', f'Невозможно загрузить {x} главу\n'
-                                                                                                 f'Проверьте, чтобы она была доступна на аккаунте'))
+            thread.buy_chapter.connect(lambda x: self.download_status_info.setText(f'Покупка - Глава {x}'))
+            thread.error_chapter.connect(lambda x:
+                                         QMessageBox.critical(self, 'Ошибка загрузки',
+                                                                    f'Невозможно загрузить {x} главу\n'                       
+                                                                    f'Проверьте, чтобы она была доступна на аккаунте\n'
+                                                                    f'Или хватало монет для её покупки'))
             thread.item_signal.connect(lambda x: self.download_bar.setValue(self.download_bar.value() + x))
             thread.done.connect(self.download_finish)
             thread.start()
