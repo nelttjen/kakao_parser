@@ -202,7 +202,7 @@ def load_to_session(file, session):
 if __name__ == '__main__':
     settings = init()
     driver = Chrome('chromedriver.exe')
-    driver.set_window_rect(0, -1000, 837, 400)
+    driver.set_window_rect(0, -2000, 837, 1000)
     app = QApplication(sys.argv)
     sys.excepthook = except_hook
     f = Window(settings)
