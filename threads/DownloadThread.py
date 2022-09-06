@@ -1,6 +1,7 @@
 import os
 import shutil
 
+import requests
 from PyQt5.QtCore import QThread, pyqtSignal
 from selenium.webdriver import Chrome
 from selenium.webdriver.common.by import By
@@ -15,6 +16,7 @@ class DownloadThread(QThread):
     chapter_start = pyqtSignal(str)
     buy_chapter = pyqtSignal(str)
     error_chapter = pyqtSignal(str)
+    error_chapter_page = pyqtSignal(str)
     done = pyqtSignal()
 
     def __init__(self, parent, driver, session, items, root):
@@ -87,9 +89,61 @@ class DownloadThread(QThread):
         if len(css_items) > 0:
             for i, itm in enumerate(css_items):
                 link = itm.get_attribute('src')
-                resp = self.session.get(link, headers=headers)
-                with open(self.root + f'\\{c_id[1]}\\{i + 1}.jpg', 'wb') as jpg:
-                    jpg.write(resp.content)
+                try:
+                    resp = self.session.get(link, headers=headers)
+                except Exception:
+                    QThread.msleep(10000)
+                    success = False
+                    for _ in range(5):
+                        try:
+                            resp = self.session.get(link, headers=headers)
+                            if resp.status_code == 200:
+                                success = True
+                                break
+                        except Exception:
+                            QThread.msleep(5000)
+                            continue
+                    if not success:
+                        self.error_chapter_page.emit(f'Ошибка загрузки: \nГлава - {c_id[1]}, \nСтраница - {i + 1}')
+                if resp.status_code == 200:
+                    with open(self.root + f'\\{c_id[1]}\\{i + 1}.jpg', 'wb') as jpg:
+                        jpg.write(resp.content)
                 self.item_signal.emit(1)
             return True
         return False
+
+
+class RequestThread(QThread):
+
+    done = pyqtSignal()
+    error = pyqtSignal(str)
+
+    def __init__(self, parent, link, save_to, session=requests.Session()):
+        super(RequestThread, self).__init__(parent=parent)
+        self.__parent = parent
+        self.link = link
+        self.session = session
+
+        self.c_id = c_id
+        self.c_page = c_page
+
+    def run(self) -> None:
+        try:
+            resp = self.session.get(self.link, headers=headers)
+        except Exception:
+            QThread.msleep(10000)
+            success = False
+            for _ in range(5):
+                try:
+                    resp = self.session.get(self.link, headers=headers)
+                    if resp.status_code == 200:
+                        success = True
+                        break
+                except Exception:
+                    QThread.msleep(5000)
+                    continue
+            if not success:
+                self.error_chapter_page.emit(f'Ошибка загрузки: \nГлава - {c_id[1]}, \nСтраница - {i + 1}')
+            if resp.status_code == 200:
+                with open(self.root + f'\\{c_id[1]}\\{i + 1}.jpg', 'wb') as jpg:
+                    jpg.write(resp.content)
