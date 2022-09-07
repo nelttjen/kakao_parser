@@ -44,7 +44,8 @@ class ChapterChoose(QDialog):
 
     def done_select(self):
         for item in self.listWidget.selectedItems():
-            item_id, chapter, pages, _ = item.text().split(' - ')
+            # print(item.text().split(' - '))
+            item_id, chapter, pages = item.text().split(' - ')[:3]
             chapter = chapter.replace('Глава ', '')
             pages = pages.replace(' Страниц', '')
             self.selected.append([item_id, chapter, pages])

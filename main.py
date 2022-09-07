@@ -25,7 +25,7 @@ class Window(QMainWindow):
     def __init__(self, opt):
         super().__init__()
 
-        self.VERSION = '1.1 beta'
+        self.VERSION = '1.2 beta'
         self.APP_NAME = 'Kakao parser'
 
         self.DEST_FOLDER = ''

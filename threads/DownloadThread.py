@@ -71,6 +71,7 @@ class DownloadThread(QThread):
                                 print('failed 11')
                                 self.failed(item)
                     else:
+
                         print('failed 3')
                         self.failed(item)
                 except Exception as e:
@@ -86,13 +87,37 @@ class DownloadThread(QThread):
         self.chapter_init.emit(c_id[1])
         self.driver.get(f'https://page.kakao.com/viewer?productId={c_id[0]}')
         QThread.msleep(10000)
-        css_items = self.driver.find_elements(By.CSS_SELECTOR, '.css-88gyaf > div > img')
+        try:
+            self.driver.find_element(By.CSS_SELECTOR, '.css-1hcd1qe.et2jwxp0')
+            css_items = []
+            # count = int(elem.text.split(' / ')[1])
+            # css_items = []
+            # for page in range(count):
+            #     css_items.append(self.driver.find_element(By.CSS_SELECTOR, '.css-1pbmabn.et2jwxp4 > img'))
+            #     self.driver.find_element(By.CSS_SELECTOR, '.css-1yd9lbo.et2jwxp2').click()
+            #     QThread.msleep(200)
+            print(f'\nButton chapter detected: {c_id[0]} - ch{c_id[1]}')
+            QThread.msleep(500)
+            self.driver.find_element(By.CSS_SELECTOR, 'img.jsx-36836804').click()
+            while True:
+                css_items.append(self.driver.find_element(By.CSS_SELECTOR, '.css-1pbmabn.et2jwxp4 > img').get_attribute('src'))
+                elem = self.driver.find_element(By.CSS_SELECTOR, '.css-1hcd1qe.et2jwxp0').text.split(' / ')
+                if elem[0] != elem[1]:
+                    self.driver.find_elements(By.CSS_SELECTOR, '.css-1yd9lbo.et2jwxp2')[1].click()
+                    QThread.msleep(200)
+                else:
+                    break
+        except Exception as e:
+            css_items = self.driver.find_elements(By.CSS_SELECTOR, '.css-88gyaf > div > img')
         self.chapter_start.emit(c_id[1])
         if len(css_items) > 0:
             print(f'\nГлава {c_id[1]} - старт')
             for i, itm in enumerate(css_items):
                 QThread.msleep(150)
-                link = itm.get_attribute('src')
+                try:
+                    link = itm.get_attribute('src')
+                except AttributeError:
+                    link = itm
                 save_to = self.root + f'\\{c_id[1]}\\{i + 1}.jpg'
                 cpah_id, chap_page = c_id[1], i + 1
                 thread = QThread()
