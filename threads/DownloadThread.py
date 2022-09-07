@@ -2,7 +2,7 @@ import os
 import shutil
 
 import requests
-from PyQt5.QtCore import QThread, pyqtSignal
+from PyQt5.QtCore import QThread, pyqtSignal, QObject
 from selenium.webdriver import Chrome
 from selenium.webdriver.common.by import By
 
@@ -26,6 +26,8 @@ class DownloadThread(QThread):
         self.session = session
         self.items = items
         self.root = root
+
+        self.threads = []
 
     def failed(self, item):
         self.item_signal.emit(int(item[2]))
@@ -87,49 +89,50 @@ class DownloadThread(QThread):
         css_items = self.driver.find_elements(By.CSS_SELECTOR, '.css-88gyaf > div > img')
         self.chapter_start.emit(c_id[1])
         if len(css_items) > 0:
+            print(f'\nГлава {c_id[1]} - старт')
             for i, itm in enumerate(css_items):
+                QThread.msleep(150)
                 link = itm.get_attribute('src')
-                try:
-                    resp = self.session.get(link, headers=headers)
-                except Exception:
-                    QThread.msleep(10000)
-                    success = False
-                    for _ in range(5):
-                        try:
-                            resp = self.session.get(link, headers=headers)
-                            if resp.status_code == 200:
-                                success = True
-                                break
-                        except Exception:
-                            QThread.msleep(5000)
-                            continue
-                    if not success:
-                        self.error_chapter_page.emit(f'Ошибка загрузки: \nГлава - {c_id[1]}, \nСтраница - {i + 1}')
-                if resp.status_code == 200:
-                    with open(self.root + f'\\{c_id[1]}\\{i + 1}.jpg', 'wb') as jpg:
-                        jpg.write(resp.content)
-                self.item_signal.emit(1)
+                save_to = self.root + f'\\{c_id[1]}\\{i + 1}.jpg'
+                cpah_id, chap_page = c_id[1], i + 1
+                thread = QThread()
+                worker = RequestThread(link, save_to, cpah_id, chap_page, self.session)
+
+                worker.moveToThread(thread)
+
+                worker.error.connect(lambda x: self.error_chapter_page.emit(x))
+                worker.done.connect(lambda: print('123'))
+                worker.done_qt.connect(thread.quit)
+
+                thread.started.connect(worker.run)
+                thread.start()
+                self.threads.append((thread, worker))
+
             return True
         return False
 
 
-class RequestThread(QThread):
+class RequestThread(QObject):
 
     done = pyqtSignal()
+    done_qt = pyqtSignal()
     error = pyqtSignal(str)
 
-    def __init__(self, parent, link, save_to, session=requests.Session()):
-        super(RequestThread, self).__init__(parent=parent)
-        self.__parent = parent
+    def __init__(self, link, save_to, c_id, c_page, session=requests.Session()):
+        super(RequestThread, self).__init__()
         self.link = link
         self.session = session
 
         self.c_id = c_id
         self.c_page = c_page
+        self.save_to = save_to
 
     def run(self) -> None:
+        # print(f'running {self.c_page}')
         try:
+            # print(self.link)
             resp = self.session.get(self.link, headers=headers)
+            # print(f'resp {self.c_page} got')
         except Exception:
             QThread.msleep(10000)
             success = False
@@ -143,7 +146,20 @@ class RequestThread(QThread):
                     QThread.msleep(5000)
                     continue
             if not success:
-                self.error_chapter_page.emit(f'Ошибка загрузки: \nГлава - {c_id[1]}, \nСтраница - {i + 1}')
+                self.error.emit(f'Ошибка загрузки: \nГлава - {self.c_id}, \nСтраница - {self.c_page}')
+        try:
+            print(f"Глава {self.c_id} - {self.c_page}: {resp.status_code}")
             if resp.status_code == 200:
-                with open(self.root + f'\\{c_id[1]}\\{i + 1}.jpg', 'wb') as jpg:
+                with open(self.save_to, 'wb') as jpg:
                     jpg.write(resp.content)
+                    self.done.emit()
+                    self.done_qt.emit()
+                    # print(f'writed {self.c_page} to {self.save_to}')
+            else:
+                with open(self.save_to.replace('.jpg', '') + '_error.jpg', 'wb'):
+                    pass
+        except:
+            with open(self.save_to.replace('.jpg', '') + '_error.jpg', 'wb'):
+                pass
+        self.done.emit()
+        self.done_qt.emit()

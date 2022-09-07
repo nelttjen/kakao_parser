@@ -25,7 +25,7 @@ class Window(QMainWindow):
     def __init__(self, opt):
         super().__init__()
 
-        self.VERSION = '1.0'
+        self.VERSION = '1.1 beta'
         self.APP_NAME = 'Kakao parser'
 
         self.DEST_FOLDER = ''
@@ -52,6 +52,7 @@ class Window(QMainWindow):
         self.set_settings(opt)
 
         self.test_btn = QPushButton()
+        self.download_bar.setVisible(False)
 
     def connect_buttons(self):
         self.chose_dest.clicked.connect(self.set_folder)
@@ -86,9 +87,10 @@ class Window(QMainWindow):
             self.update_login_creds.setEnabled(True)
 
     def proc_login(self):
-        proc_t = ProcessThread(self, driver)
-        proc_t.done.connect(self.login_cookie)
-        proc_t.start()
+        if not self.is_working:
+            proc_t = ProcessThread(self, driver)
+            proc_t.done.connect(self.login_cookie)
+            proc_t.start()
 
     def choose_chapters(self):
         if not self.logged:
@@ -139,8 +141,8 @@ class Window(QMainWindow):
             thread.start()
 
     def download_finish(self):
-        QMessageBox.information(self, 'Info', 'Загрузка завершена')
-        self.download_status_info.setText('Загрузка завершена')
+        QMessageBox.information(self, 'Info', 'Очередь создана. Загрузка вскоре завершится.')
+        self.download_status_info.setText('Очередь создана')
         self.is_working = False
 
     def set_folder(self):
