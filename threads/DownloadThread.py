@@ -19,13 +19,14 @@ class DownloadThread(QThread):
     error_chapter_page = pyqtSignal(str)
     done = pyqtSignal()
 
-    def __init__(self, parent, driver, session, items, root):
+    def __init__(self, parent, driver, session, items, root, selected):
         super(DownloadThread, self).__init__(parent=parent)
         self.__parent = parent
         self.driver: Chrome = driver
         self.session = session
         self.items = items
         self.root = root
+        self.selected = selected
 
         self.threads = []
 
@@ -41,35 +42,24 @@ class DownloadThread(QThread):
             if not self.download_chapter(item):
                 self.buy_chapter.emit(item[1])
                 try:
-                    elem = self.driver.find_elements(By.CSS_SELECTOR, '.jsx-1598887949.btnBox > span')
+                    elem = self.driver.find_element(By.CSS_SELECTOR, '.css-1bfkcue-Button')
                     if elem:
-                        elem[1].click()
+                        elem.click()
                         QThread.msleep(3000)
                         try:
-                            btn = self.driver.find_element(By.CSS_SELECTOR, '.css-mjcxe9.eq93mh80')
+                            btn = self.driver.find_elements(By.CSS_SELECTOR,
+                                                            '.css-gecc4z-DialogButton-TicketBuyAndUseDialog')
                         except Exception:
                             if not self.download_chapter(item):
                                 print('failed2')
                                 self.failed(item)
                             continue
-                        btn.click()
+                        btn[0].click()
                         QThread.msleep(5000)
-                        elem2 = self.driver.find_element(By.CSS_SELECTOR, '.jsx-2703313123.btnBuy')
-                        elem2.click()
-                        QThread.msleep(5000)
-                        self.driver.get(f'https://page.kakao.com/viewer?productId={item[0]}')
+                        self.driver.get(f'https://page.kakao.com/content/{self.selected}/viewer/{item[0]}')
                         if not self.download_chapter(item):
-                            try:
-                                elem = self.driver.find_elements(By.CSS_SELECTOR, '.jsx-1598887949.btnBox > span')
-                                elem[1].click()
-                                QThread.msleep(5000)
-                                if not self.download_chapter(item):
-                                    self.failed(item)
-                                    print('failed 1')
-                            except Exception as e:
-                                print(e)
-                                print('failed 11')
-                                self.failed(item)
+                            self.failed(item)
+                            print('failed 1')
                     else:
 
                         print('failed 3')
@@ -85,30 +75,20 @@ class DownloadThread(QThread):
             shutil.rmtree(self.root + f'\\{c_id[1]}')
         os.mkdir(self.root + f'\\{c_id[1]}')
         self.chapter_init.emit(c_id[1])
-        self.driver.get(f'https://page.kakao.com/viewer?productId={c_id[0]}')
+        self.driver.get(f'https://page.kakao.com/content/{self.selected}/viewer/{c_id[0]}')
         QThread.msleep(10000)
         try:
-            self.driver.find_element(By.CSS_SELECTOR, '.css-1hcd1qe.et2jwxp0')
-            css_items = []
-            # count = int(elem.text.split(' / ')[1])
-            # css_items = []
-            # for page in range(count):
-            #     css_items.append(self.driver.find_element(By.CSS_SELECTOR, '.css-1pbmabn.et2jwxp4 > img'))
-            #     self.driver.find_element(By.CSS_SELECTOR, '.css-1yd9lbo.et2jwxp2').click()
-            #     QThread.msleep(200)
+            self.driver.find_element(By.CSS_SELECTOR, '.css-znhlra-ViewerSlideSwiperMain')
             print(f'\nButton chapter detected: {c_id[0]} - ch{c_id[1]}')
             QThread.msleep(500)
-            self.driver.find_element(By.CSS_SELECTOR, 'img.jsx-36836804').click()
-            while True:
-                css_items.append(self.driver.find_element(By.CSS_SELECTOR, '.css-1pbmabn.et2jwxp4 > img').get_attribute('src'))
-                elem = self.driver.find_element(By.CSS_SELECTOR, '.css-1hcd1qe.et2jwxp0').text.split(' / ')
-                if elem[0] != elem[1]:
-                    self.driver.find_elements(By.CSS_SELECTOR, '.css-1yd9lbo.et2jwxp2')[1].click()
-                    QThread.msleep(200)
-                else:
-                    break
+            self.driver.find_element(By.CSS_SELECTOR, '.css-u0e2y5-ViewerContainer').click()
+            QThread.msleep(500)
+            self.driver.find_elements(By.CSS_SELECTOR,
+                                      '.css-psy1a9-List-List-ViewerSettingScroll'
+                                      'ableItem-ViewerSettingScrollableItem > li')[1].click()
         except Exception as e:
-            css_items = self.driver.find_elements(By.CSS_SELECTOR, '.css-88gyaf > div > img')
+            pass
+        css_items = self.driver.find_elements(By.CSS_SELECTOR, '.css-3q7n7r-ScrollImageViewerImage')
         self.chapter_start.emit(c_id[1])
         if len(css_items) > 0:
             print(f'\nГлава {c_id[1]} - старт')

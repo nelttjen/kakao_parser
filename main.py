@@ -14,12 +14,10 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QMessageBox,
 
 from threads.WebDriver import LoginThread, ProcessThread
 from threads.DownloadThread import DownloadThread
-from utils import CONFIG_DEFAULT
+from utils import CONFIG_DEFAULT, DEBUG
 from widgets.ChapterChoose import ChapterChoose
 
-
 FIRST = False
-
 
 class Window(QMainWindow):
     def __init__(self, opt):
@@ -77,8 +75,9 @@ class Window(QMainWindow):
 
     def login_cookie(self):
         global FIRST
-        with open(f'temp\\cookies.json', 'r', encoding='utf-8') as json_f:
-            load_to_session(json_f, self.session)
+        if not DEBUG:
+            with open(f'temp\\cookies.json', 'r', encoding='utf-8') as json_f:
+                load_to_session(json_f, self.session)
         self.login_proc.hide()
         QMessageBox.information(self, 'Info', 'Вход завершен')
         self.logged = True
@@ -98,7 +97,7 @@ class Window(QMainWindow):
             return
         text = self.chapter_id.text()
         if text.startswith('https://'):
-            text = text.replace('https://page.kakao.com/home?seriesId=', '')
+            text = text.replace('https://page.kakao.com/content/', '')
         try:
             text = int(text)
         except ValueError:
@@ -127,7 +126,7 @@ class Window(QMainWindow):
             self.download_bar.setMaximum(total_download)
             self.download_bar.setValue(0)
             thread = DownloadThread(self, driver, self.session, self.choosed_now,
-                                    self.DEST_FOLDER + f'\\{self.title_now}')
+                                    self.DEST_FOLDER + f'\\{self.title_now}', self.title_now)
             thread.chapter_init.connect(lambda x: self.download_status_info.setText(f'Инициализация загрузки - Глава {x}'))
             thread.chapter_start.connect(lambda x: self.download_status_info.setText(f'Загрузка - Глава {x}'))
             thread.buy_chapter.connect(lambda x: self.download_status_info.setText(f'Покупка - Глава {x}'))
@@ -203,8 +202,11 @@ def load_to_session(file, session):
 
 if __name__ == '__main__':
     settings = init()
-    driver = Chrome('chromedriver.exe')
-    driver.set_window_rect(0, -2000, 837, 1000)
+    if not DEBUG:
+        driver = Chrome('chromedriver.exe')
+        driver.set_window_rect(0, -2000, 837, 1000)
+    else:
+        driver = None
     app = QApplication(sys.argv)
     sys.excepthook = except_hook
     f = Window(settings)

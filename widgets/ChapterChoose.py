@@ -8,7 +8,7 @@ from threads.ChapterThread import ChapterThread
 class ChapterChoose(QDialog):
     def __init__(self, parent, chapter_id, session):
         super().__init__(parent, Qt.WindowCloseButtonHint)
-        uic.loadUi('ui\\chapter.ui', self)
+        uic.loadUi('./ui/chapter.ui', self)
 
         self.chapter_id = chapter_id
         self.session = session
