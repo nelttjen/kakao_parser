@@ -16,8 +16,10 @@ from threads.WebDriver import LoginThread, ProcessThread
 from threads.DownloadThread import DownloadThread
 from utils import CONFIG_DEFAULT, DEBUG
 from widgets.ChapterChoose import ChapterChoose
+from widgets.CookieDialog import CookieDialog
 
 FIRST = False
+
 
 class Window(QMainWindow):
     def __init__(self, opt):
@@ -44,7 +46,7 @@ class Window(QMainWindow):
         self.setFixedSize(self.width(), self.height())
 
         self.connect_buttons()
-        self.start_login()
+        # self.start_login()
 
         self.opt = opt
         self.set_settings(opt)
@@ -54,8 +56,8 @@ class Window(QMainWindow):
 
     def connect_buttons(self):
         self.chose_dest.clicked.connect(self.set_folder)
-        self.login_proc.clicked.connect(self.proc_login)
-        self.update_login_creds.clicked.connect(self.proc_login)
+        self.login_proc.clicked.connect(self.login_cookie)
+        self.update_login_creds.clicked.connect(self.login_cookie)
 
         self.choose_chapter.clicked.connect(self.choose_chapters)
         self.download_btn.clicked.connect(self.download_chapters)
@@ -66,30 +68,37 @@ class Window(QMainWindow):
             self.DEST_SET = True
             self.set_dest_chosed()
 
-    def start_login(self):
-        login_t = LoginThread(self, driver)
-        login_t.start()
-        QMessageBox.information(self, 'Info', 'Сейчас появится окно с авторизацией\n'
-                                              'После входа в аккаунт нажмите на кнопку "Завершить логин" сверху\n'
-                                              'P.S. После пропажи окна подождите 3-4 секунды перед нажатием')
+    # def start_login(self):
+    #     login_t = LoginThread(self, driver)
+    #     login_t.start()
+    #     QMessageBox.information(self, 'Info', 'Сейчас появится окно с авторизацией\n'
+    #                                           'После входа в аккаунт нажмите на кнопку "Завершить логин" сверху\n'
+    #                                           'P.S. После пропажи окна подождите 3-4 секунды перед нажатием')
 
     def login_cookie(self):
         global FIRST
-        if not DEBUG:
-            with open(f'temp\\cookies.json', 'r', encoding='utf-8') as json_f:
-                load_to_session(json_f, self.session)
-        self.login_proc.hide()
-        QMessageBox.information(self, 'Info', 'Вход завершен')
-        self.logged = True
-        if not FIRST:
-            FIRST = True
-            self.update_login_creds.setEnabled(True)
+        cookie_w = CookieDialog(self)
+        agreement = cookie_w.exec_()
+        cookie_text = cookie_w.cookie_edit.toPlainText()
+        if agreement and cookie_text:
+            try:
+                cookie_data = json.loads(cookie_text)
+                load_to_session(cookie_data, self.session)
+                self.login_proc.hide()
+                QMessageBox.information(self, 'Info', 'Вход завершен')
+                self.logged = True
+                if not FIRST:
+                    FIRST = True
+                    self.update_login_creds.setEnabled(True)
+            except Exception as e:
+                print(e)
+                QMessageBox.critical(self, 'Error', 'Авторизация не удалась, првоерьте целостность данных куки')
 
-    def proc_login(self):
-        if not self.is_working:
-            proc_t = ProcessThread(self, driver)
-            proc_t.done.connect(self.login_cookie)
-            proc_t.start()
+    # def proc_login(self):
+    #     if not self.is_working:
+    #         proc_t = ProcessThread(self, driver)
+    #         proc_t.done.connect(self.login_cookie)
+    #         proc_t.start()
 
     def choose_chapters(self):
         if not self.logged:
@@ -122,11 +131,8 @@ class Window(QMainWindow):
             return
         if self.choosed_now and self.title_now:
             self.is_working = True
-            total_download = sum(int(i[2]) for i in self.choosed_now)
-            self.download_bar.setMaximum(total_download)
-            self.download_bar.setValue(0)
-            thread = DownloadThread(self, driver, self.session, self.choosed_now,
-                                    self.DEST_FOLDER + f'\\{self.title_now}', self.title_now)
+            thread = DownloadThread(self, None, self.session, self.choosed_now,
+                                    self.DEST_FOLDER + f'/{self.title_now}', self.title_now)
             thread.chapter_init.connect(lambda x: self.download_status_info.setText(f'Инициализация загрузки - Глава {x}'))
             thread.chapter_start.connect(lambda x: self.download_status_info.setText(f'Загрузка - Глава {x}'))
             thread.buy_chapter.connect(lambda x: self.download_status_info.setText(f'Покупка - Глава {x}'))
@@ -134,8 +140,8 @@ class Window(QMainWindow):
                                          QMessageBox.critical(self, 'Ошибка загрузки',
                                                                     f'Невозможно загрузить {x} главу\n'                       
                                                                     f'Проверьте, чтобы она была доступна на аккаунте\n'
-                                                                    f'Или хватало монет для её покупки'))
-            thread.item_signal.connect(lambda x: self.download_bar.setValue(self.download_bar.value() + x))
+                                                                    f'Или обновите куки'))
+            # thread.item_signal.connect(lambda x: self.download_bar.setValue(self.download_bar.value() + x))
             thread.done.connect(self.download_finish)
             thread.start()
 
@@ -148,10 +154,10 @@ class Window(QMainWindow):
         file = str(QFileDialog.getExistingDirectory(self, "Выбор папки..."))
         if file:
             try:
-                with open(f'{file}\\test.temp', 'w'):
+                with open(f'{file}/test.temp', 'w'):
                     pass
                 try:
-                    os.remove(f'{file}\\test.temp')
+                    os.remove(f'{file}/test.temp')
                 except:
                     pass
                 self.DEST_FOLDER = file
@@ -163,7 +169,7 @@ class Window(QMainWindow):
                 QMessageBox.critical(self, 'Ошибка', f'Нет прав на запись файлов в эту папку\n{e}', QMessageBox.Ok)
 
     def save_opt(self):
-        with open('.\\config.json', 'w', encoding='utf-8') as file:
+        with open('config.json', 'w', encoding='utf-8') as file:
             json.dump(self.opt, file)
 
     def set_dest_chosed(self):
@@ -175,13 +181,13 @@ def except_hook(cls, exception, traceback):
 
 
 def init():
-    os.mkdir('.\\temp') if not os.path.exists('.\\temp') else None
-    if not os.path.exists('.\\config.json'):
-        with open(f".\\config.json", 'w', encoding='utf-8') as def_c:
+    os.mkdir('temp') if not os.path.exists('temp') else None
+    if not os.path.exists('config.json'):
+        with open(f"config.json", 'w', encoding='utf-8') as def_c:
             json.dump(CONFIG_DEFAULT, def_c)
             setts = CONFIG_DEFAULT
     else:
-        with open(f'.\\config.json', 'r', encoding='utf-8') as load_j:
+        with open(f'config.json', 'r', encoding='utf-8') as load_j:
             setts = json.load(load_j)
     if setts.get('save_directory'):
         try:
@@ -193,7 +199,7 @@ def init():
 
 def load_to_session(file, session):
     try:
-        data = json.load(file)
+        data = file
         for i in data:
             session.cookies.set(name=i['name'], value=i['value'], domain=i['domain'])
     except:
@@ -202,18 +208,18 @@ def load_to_session(file, session):
 
 if __name__ == '__main__':
     settings = init()
-    if not DEBUG:
-        driver = Chrome('chromedriver.exe')
-        driver.set_window_rect(0, -2000, 837, 1000)
-    else:
-        driver = None
+    # if not DEBUG:
+    #     driver = Chrome('chromedriver.exe')
+    #     driver.set_window_rect(0, -2000, 837, 1000)
+    # else:
+    #     driver = None
     app = QApplication(sys.argv)
     sys.excepthook = except_hook
     f = Window(settings)
     f.show()
     app.exec_()
     try:
-        driver.quit()
+        # driver.quit()
         sys.exit()
     except:
         sys.exit()
