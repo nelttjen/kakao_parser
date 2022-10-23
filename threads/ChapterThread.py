@@ -56,7 +56,7 @@ def get_chapter_list(chapter_id: int, _session: requests.Session):
         used.append(str(number))
         _string = f'{number} - {item["node"]["single"]["productId"]} - {item["node"]["row1"]["title"]}'
         array.append(_string)
-    return array
+    return sorted(array, key=lambda x: int(x.split(' - ')[0]))
 
 
 class ChapterThread(QThread):
