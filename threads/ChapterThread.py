@@ -18,13 +18,13 @@ def clear_int(_str):
 
 def get_chapter_list(chapter_id: int, _session: requests.Session):
     endpoint = 'https://page.kakao.com/graphql'
-    header = {
-        'User-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.63 Safari/537.36'}
+    header = {'User-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.63 Safari/537.36',
+              "Authority": "page.kakao.com", "Origin": "https://page.kakao.com", "Referer": f"https://page.kakao.com/content/{chapter_id}"}
 
     full_list = []
     for i in range(0, 1000, 20):
         query = {
-            "query": "query contentHomeProductList($after: String, $before: String, $first: Int, $last: Int, $seriesId: Long!, $boughtOnly: Boolean, $sortType: String) {\n  contentHomeProductList(\n    seriesId: $seriesId\n    after: $after\n    before: $before\n    first: $first\n    last: $last\n    boughtOnly: $boughtOnly\n    sortType: $sortType\n  ) {\n    totalCount\n    pageInfo {\n      hasNextPage\n      endCursor\n      hasPreviousPage\n      startCursor\n      __typename\n    }\n    selectedSortOption {\n      id\n      name\n      param\n      __typename\n    }\n    sortOptionList {\n      id\n      name\n      param\n      __typename\n    }\n    edges {\n      cursor\n      node {\n        ...SingleListViewItem\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}\n\nfragment SingleListViewItem on SingleListViewItem {\n  id\n  type\n  thumbnail\n  showPlayerIcon\n  isCheckMode\n  isChecked\n  scheme\n  row1 {\n    badgeList\n    title\n    __typename\n  }\n  row2\n  row3\n  single {\n    productId\n    ageGrade\n    id\n    isFree\n    thumbnail\n    title\n    slideType\n    operatorProperty {\n      isTextViewer\n      __typename\n    }\n    __typename\n  }\n  isViewed\n  purchaseInfoText\n  eventLog {\n    ...EventLogFragment\n    __typename\n  }\n}\n\nfragment EventLogFragment on EventLog {\n  click {\n    layer1\n    layer2\n    setnum\n    ordnum\n    copy\n    imp_id\n    imp_provider\n    __typename\n  }\n  eventMeta {\n    id\n    name\n    subcategory\n    category\n    series\n    provider\n    series_id\n    type\n    __typename\n  }\n  viewimp_contents {\n    type\n    name\n    id\n    imp_area_ordnum\n    imp_id\n    imp_provider\n    imp_type\n    layer1\n    layer2\n    __typename\n  }\n  customProps {\n    landing_path\n    view_type\n    toros_imp_id\n    toros_file_hash_key\n    toros_event_meta_id\n    content_cnt\n    event_series_id\n    event_ticket_type\n    play_url\n    __typename\n  }\n}\n",
+            "query": "query contentHomeProductList($after: String, $before: String, $first: Int, $last: Int, $seriesId: Long!, $boughtOnly: Boolean, $sortType: String) {\n contentHomeProductList(\n seriesId: $seriesId\n after: $after\n before: $before\n first: $first\n last: $last\n boughtOnly: $boughtOnly\n sortType: $sortType\n ) {\n totalCount\n pageInfo {\n hasNextPage\n endCursor\n hasPreviousPage\n startCursor\n __typename\n }\n selectedSortOption {\n id\n name\n param\n __typename\n }\n sortOptionList {\n id\n name\n param\n __typename\n }\n edges {\n cursor\n node {\n ...SingleListViewItem\n __typename\n }\n __typename\n }\n __typename\n }\n}\n\nfragment SingleListViewItem on SingleListViewItem {\n id\n type\n thumbnail\n showPlayerIcon\n isCheckMode\n isChecked\n scheme\n row1 {\n badgeList\n title\n __typename\n }\n row2\n row3\n single {\n productId\n ageGrade\n id\n isFree\n thumbnail\n title\n slideType\n operatorProperty {\n isTextViewer\n __typename\n }\n __typename\n }\n isViewed\n purchaseInfoText\n eventLog {\n ...EventLogFragment\n __typename\n }\n}\n\nfragment EventLogFragment on EventLog {\n fromGraphql\n click {\n layer1\n layer2\n setnum\n ordnum\n copy\n imp_id\n imp_provider\n __typename\n }\n eventMeta {\n id\n name\n subcategory\n category\n series\n provider\n series_id\n type\n __typename\n }\n viewimp_contents {\n type\n name\n id\n imp_area_ordnum\n imp_id\n imp_provider\n imp_type\n layer1\n layer2\n __typename\n }\n customProps {\n landing_path\n view_type\n toros_imp_id\n toros_file_hash_key\n toros_event_meta_id\n content_cnt\n event_series_id\n event_ticket_type\n play_url\n banner_uid\n __typename\n }\n}\n",
             "operationName": "contentHomeProductList",
             "variables": {"seriesId": chapter_id, "after": f"{i}", "boughtOnly": False, "sortType": "desc"}}
         response = _session.post(endpoint, headers=header, json=query)
@@ -60,7 +60,6 @@ def get_chapter_list(chapter_id: int, _session: requests.Session):
 
 
 class ChapterThread(QThread):
-
     sending = pyqtSignal()
     fetching = pyqtSignal()
     done = pyqtSignal()
@@ -113,4 +112,3 @@ class ChapterThread(QThread):
     #         self.done_str.emit(';'.join(self.items))
     #     else:
     #         self.error.emit()
-
